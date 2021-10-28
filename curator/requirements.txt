@@ -1,0 +1,4 @@
+boto3
+requests_aws4auth
+opensearch-py
+curator-opensearch

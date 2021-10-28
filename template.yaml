@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Amazon OpenSearch Service Log Rotate Curator
+
+  Sample code for log rotating Amazon OpenSearch domain using curator
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 180
+
+Resources:
+  CuratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: curator/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          OPENSEARCH_HOST: your_opensearch_doamin_url.region.es.amazonaws.com # Put your OpenSearch Domain name
+          RETENTION_IN_DAYS: 30 # Put the amount of days you want to keep in your OpenSearch Cluster
+      Policies:
+        - Statement:
+            - Sid: AllowOSActions
+              Effect: Allow
+              Action:
+                - es:ESHttpPost
+                - es:ESHttpGet
+                - es:ESHttpDelete
+                - es:ESHttpPut
+              Resource:
+                - '*' # We recommend the least privileges approach, please limit the function policy to your specific OpenSearch domain
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0000000 # Update the security group that will allow lambda to access OpenSearch domain on port 443
+        SubnetIds:
+          - subnet-0000000
+      Events:
+        CuratorSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 day) # this control the trigger schedule to invoke the curator lambda
+            Name: OpenSearch-Log-Rotate-Schedule
+            Description: Trigger to run log rotate for OpenSearch indexes
+            Enabled: True
+
+Outputs:
+  CuratorFunction:
+    Description: "Curator Function ARN"
+    Value: !GetAtt CuratorFunction.Arn
+  CuratorFunctionIamRole:
+    Description: "IAM Role created for Curator function"
+    Value: !GetAtt CuratorFunctionRole.Arn
